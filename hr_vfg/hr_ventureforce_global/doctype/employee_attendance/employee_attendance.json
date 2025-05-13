@@ -16,6 +16,7 @@
   "employee_name",
   "year",
   "department",
+  "shift_type",
   "column_break_7",
   "biometric_id",
   "company",
@@ -642,11 +643,17 @@
    "fieldname": "total_halfday_missing_check_out",
    "fieldtype": "Float",
    "label": "Total Halfday Missing Check Out "
+  },
+  {
+   "fetch_from": "employee.default_shift",
+   "fieldname": "shift_type",
+   "fieldtype": "Data",
+   "label": "Shift Type"
   }
  ],
  "image_field": "image",
  "links": [],
- "modified": "2024-10-22 23:54:19.020300",
+ "modified": "2025-05-09 11:49:02.243445",
  "modified_by": "Administrator",
  "module": "HR VentureForce Global",
  "name": "Employee Attendance",
@@ -666,6 +673,7 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "employee_name",
  "sort_field": "modified",
  "sort_order": "DESC",

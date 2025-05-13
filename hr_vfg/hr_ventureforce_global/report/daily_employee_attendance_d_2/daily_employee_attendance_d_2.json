@@ -1,0 +1,18 @@
+{
+  "filters": [
+    {
+      "fieldname": "status",
+      "label": "Status",
+      "fieldtype": "Select",
+      "options": "On time\nLate\nEarly Going",
+      "default": "On time"
+    },
+    {
+      "fieldname": "a_p",
+      "label": "A/P",
+      "fieldtype": "Select",
+      "options": "Present\nAbsent\nHalf Day",
+      "default": "Present"
+    }
+  ]
+}

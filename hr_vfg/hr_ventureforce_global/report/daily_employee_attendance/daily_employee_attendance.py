@@ -1,110 +1,150 @@
-# Copyright (c) 2022, Frappe Technologies Pvt. Ltd. and contributors
-# For license information, please see license.txt
-
 import frappe
+from datetime import datetime, timedelta, date
 
 def execute(filters=None):
-	columns, data = get_columns(filters), get_data(filters)
+    columns, data = get_columns(filters), get_data(filters)
 
-	return columns, data
+    # Ensure each row matches the number of columns
+    for i, row in enumerate(data):
+        if len(row) < len(columns):
+            data[i] += [""] * (len(columns) - len(row))
+        elif len(row) > len(columns):
+            data[i] = row[:len(columns)]
+
+    return columns, data
+
 def get_columns(filters):
-	return[
-		"Department:Data:120",
-		# "Biometric ID:Data:80",
-		# "Date:Date:100",
-			 "Employee:Data:120",
-			#   "Employee Name:Data:120",
-			  "Designation:Data:120",
-			
-			"Check In:Data:100",
+    return [
+        "Employee ID:Data:120",
+        "Employee Name:Data:180",
+        "Designation:Data:120",
+        "Department:Data:120",
+        "Check In:Data:100",
+        "Check Out:Data:100",
+        "Status:Data:100",
+        "A/P:Data:100",
+        "Late Coming (HH:MM:SS):Data:140",
+        "Early Going (HH:MM:SS):Data:140",
+        "Over Time (HH:MM:SS):Data:140"
+    ]
 
-			"Check Out:Data:100",
-			# "Total Hours:Data:100", 
-			"Late Coming:Data:100",
-			# "Holidays:Data:50",
-			# "Halfday:Data:100",
-			"Early Going:Data:100",
-			"Over Time:Data:100",
-			# "Status:Data:100"
-
-	]
 def get_data(filters):
-	cond = ""
-	if filters.get("depart"):
-		cond = "and emp.department='{0}' ".format(filters.get("depart"))
+    cond = ""
+    if filters.get("depart"):
+        cond += f" and emp.department = '{filters.get('depart')}'"
+    if filters.get("employee"):
+        cond += f" and emp.employee = '{filters.get('employee')}'"
 
-	if filters.get("employee"):
-		cond = "and emp.employee ='{0}' ".format(filters.get("employee"))
-	records = frappe.db.sql("""
-							select
-							emp.department ,
-							emp.biometric_id ,
-							emptab.date,
-							emp.employee ,
-							
-							emptab.check_in_1,
+    records = frappe.db.sql("""
+        SELECT
+            emp.department,
+            emp.employee,
+            emply.employee_name,
+            emply.designation,
+            emptab.check_in_1,
+            emptab.check_out_1,
+            emptab.early_going_hours,
+            emptab.late_sitting,
+            emptab.shift_in
+        FROM `tabEmployee Attendance` AS emp
+        JOIN `tabEmployee Attendance Table` AS emptab ON emptab.parent = emp.name
+        JOIN `tabEmployee` AS emply ON emp.employee = emply.name
+        WHERE emptab.date = %s {conditions} AND emply.status = 'Active'
+        ORDER BY emptab.date, emp.department
+    """.format(conditions=cond), (filters.get('to'),), as_dict=True)
 
-							emptab.check_out_1,
-							emptab.difference , 
-							emptab.late_coming_hours,
-							concat((emptab.weekly_off)+(emptab.public_holiday)) as holiday,
-							emptab.half_day,
-							IF(emptab.early_going_hours='14:30:00' or emptab.early!=1, "0", emptab.early_going_hours) as early_going_h,
-							emptab.late_sitting,
-							emptab.late,
-							emptab.absent
-							from  `tabEmployee Attendance` as emp
-							join `tabEmployee Attendance Table` as emptab on emptab.parent=emp.name
-							JOIN tabEmployee emply
-							ON emp.employee = emply.name
+    data = []
+    total_lates = 0
+    total_presents = 0
+    total_absents = 0
+    total_half_days = 0
+    total_early_goings = 0
 
-							where emptab.date = %s {0} and emply.status="Active"
-							order by emptab.date, emp.department
-							""".format(cond),(filters.get('to')))
+    for item in records:
+        late_minutes = 0
+        early_minutes = 0
+        overtime_minutes = 0
+        ap_status = ""
+        status_list = []
 
-	data = []
-	prev_dep  = None 
-	total_lates = 0
-	total_presents = 0
-	total_absents = 0
-	for item in records:
-		row = None
-		if prev_dep != item[0]:
-			prev_dep = item[0]
-			row=[item[0],"","","","","","","","","","","","","",]
-			data.append(row)
-			row=[""]
-		else:
-			row=[""]
-		# row.append(item[1])
-		# row.append(item[2])
-		row.append(item[3])
-		# row.append(frappe.db.get_value("Employee",{"name":item[3]},"employee_name")),
-		row.append(frappe.db.get_value("Employee",{"name":item[3]},"designation")),
-		row.append(item[4])
-		row.append(item[5])
-		# row.append(item[6])
-		row.append(item[7])
-		row.append(item[8])
-		# row.append(item[9])
-		row.append(item[10])
-		# row.append(item[11])
-		status = "<span style='color:blue;'>P</span>"
-		if item[12] == 1:
-			status = "<span style='color:green;'>L</span>"
-			total_lates+=1
-		elif item[13] == 1:
-			status = "<span style='color:red;'>A</span>"
-			total_absents+=1
-		else:
-			total_presents+=1
-		row.append(status)
-		data.append(row)
-	data.append([
-		"","","","","","",
-		"<b>Total Presents</b>",total_presents,
-		"<b>Total Lates</b>",total_lates,
-		"<b>Total Absents</b>",total_absents,
-	])
-	return data
-		
+        try:
+            shift_in = datetime.strptime(str(item.shift_in), "%H:%M:%S") if item.shift_in else None
+            check_in_time = datetime.strptime(str(item.check_in_1)[-8:], "%H:%M:%S") if item.check_in_1 else None
+            check_out_time = datetime.strptime(str(item.check_out_1)[-8:], "%H:%M:%S") if item.check_out_1 else None
+
+            today = date.today()
+            check_in = datetime.combine(today, check_in_time.time()) if check_in_time else None
+            check_out = datetime.combine(today, check_out_time.time()) if check_out_time else None
+            if check_in and check_out and check_out < check_in:
+                check_out += timedelta(days=1)
+            if shift_in:
+                shift_in = datetime.combine(today, shift_in.time())
+                shift_out = shift_in + timedelta(hours=9)
+
+            # Late Coming
+            if check_in and shift_in:
+                diff = int((check_in - shift_in).total_seconds() / 60)
+                late_minutes = diff if diff > 0 else 0
+                if late_minutes >= 16:
+                    status_list.append("Late")
+                else:
+                    status_list.append("On time")
+
+            # Early Going (only if check_out before shift_out)
+            if check_out and shift_in:
+                if check_out < shift_out:
+                    early_minutes = int((shift_out - check_out).total_seconds() / 60)
+                    status_list.append("Early Going")
+                    total_early_goings += 1
+
+                # Overtime
+                overtime_diff = int((check_out - shift_out).total_seconds() / 60)
+                if overtime_diff > 60:
+                    overtime_minutes = overtime_diff
+
+            # A/P Logic (Early Going NOT included here anymore)
+            if not check_in or not check_out:
+                ap_status = "Absent"
+                total_absents += 1
+                status = ""
+            else:
+                total_worked_minutes = int((check_out - check_in).total_seconds() / 60)
+                if total_worked_minutes < 270:
+                    ap_status = "Absent"
+                    total_absents += 1
+                elif total_worked_minutes < 480:
+                    ap_status = "Half Day"
+                    total_half_days += 1
+                else:
+                    ap_status = "Present"
+                    total_presents += 1
+
+                status = ", ".join(status_list) if status_list else ""
+
+        except Exception as e:
+            frappe.log_error(message=str(e), title="Attendance Parse Error")
+            status = "Error"
+            ap_status = "Error"
+
+        row = [
+            item.employee,
+            item.employee_name,
+            item.designation,
+            item.department,
+            item.check_in_1 or "",
+            item.check_out_1 or "",
+            status,
+            ap_status,
+            str(timedelta(minutes=late_minutes)),
+            str(timedelta(minutes=early_minutes)),
+            str(timedelta(minutes=overtime_minutes)),
+        ]
+        data.append(row)
+
+    # Add summary rows at the bottom
+    data.append([""] * 6 + ["", "<b>Total Presents</b>", total_presents, "", ""])	
+    data.append([""] * 6 + ["", "<b>Total Early Going</b>", total_early_goings, "", ""])
+    data.append([""] * 6 + ["", "<b>Total Absents</b>", total_absents, "", ""])
+    data.append([""] * 6 + ["", "<b>Total Half Days</b>", total_half_days, "", ""])
+
+    return data

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; }
+        h2 { text-align: center; margin-bottom: 10px; }
+
+        .info-table td { padding: 5px; }
+        .info-table { margin-bottom: 10px; width: 100%; }
+
+        table.main-table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 10px;
+        }
+        table.main-table th, table.main-table td {
+            border: 1px solid #444;
+            padding: 5px;
+            text-align: center;
+        }
+        table.main-table th {
+            background-color: #f0f0f0;
+        }
+
+        .summary-section {
+            margin-top: 20px;
+            width: 60%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .summary-section th, .summary-section td {
+            padding: 4px 8px;
+            text-align: left;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: right;
+            font-size: 10px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Employee Attendance Report</h2>
+
+    <table class="info-table">
+        <tr>
+            <td><strong>Date:</strong></td>
+            <td>{{ filters.to }}</td>
+            {% if filters.employee %}
+            <td><strong>Employee:</strong></td>
+            <td>{{ filters.employee }}</td>
+            {% endif %}
+            {% if filters.depart %}
+            <td><strong>Department:</strong></td>
+            <td>{{ filters.depart }}</td>
+            {% endif %}
+        </tr>
+    </table>
+
+    <table class="main-table">
+        <thead>
+            <tr>
+                <th>Emp ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Status</th>
+                <th>A/P</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Late</th>
+                <th>Early</th>
+                <th>Overtime</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                {% for cell in row %}
+                <td>{{ cell }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 style="text-align: center; margin-top: 30px;">Summary</h3>
+    <table class="summary-section">
+        {% for item in summary %}
+        <tr>
+            <td><strong>{{ item.label }}</strong></td>
+            <td>{{ item.value }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <p class="footer">Printed on {{ frappe.utils.nowdate() }}</p>
+</body>
+</html>

@@ -1,61 +1,111 @@
-<h2 class="text-center">{%= __("EMPLOYEE INDIVIDUAL ATTENDANCE REPORT") %}</h2>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Employee Attendance Report</title>
+    <style>
+        body {
+            font-family: "Helvetica", "Arial", sans-serif;
+            margin: 30px;
+            font-size: 12px;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header h2 {
+            margin: 0;
+        }
+        .date-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .date-info span {
+            display: inline-block;
+            margin: 0 10px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 6px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .summary {
+            margin-top: 30px;
+        }
+        .summary h4 {
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .summary-table td {
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Employee Attendance Report</h2>
+    </div>
 
-<table style="width: 100%; margin-bottom: 10px;">
-  <tr>
-    <td style="width: 15%;"><b>Employee:</b></td>
-    <td style="width: 25%;">{%= filters.employee %}</td>
+    <div class="date-info">
+        <span><strong>Date:</strong> {{ filters.to }}</span>
+        <span><strong>Day:</strong> {{ data[0].day if data else "" }}</span>
+    </div>
 
-    <td style="width: 10%;"><b>Month:</b></td>
-    <td style="width: 20%;">{%= filters.month + " " + filters.year %}</td>
+    <table>
+        <thead>
+            <tr>
+                <th>Employee Name</th>
+                <th>Check In</th>
+                <th>Check Out</th>
+                <th>Late Arrival</th>
+                <th>Early Going</th>
+                <th>Overtime</th>
+                <th>Status</th>
+                <th>A/P</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.actual_in_time }}</td>
+                    <td>{{ row.actual_out_time }}</td>
+                    <td>{{ row.late_arrival }}</td>
+                    <td>{{ row.early_going }}</td>
+                    <td>{{ row.overtime }}</td>
+                    <td>{{ row.day_status }}</td>
+                    <td>{{ row.att_status }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-    <td style="width: 10%;"><b>Department:</b></td>
-    <td style="width: 20%;">{%= filters.department %}</td>
-  </tr>
-</table>
-
-<hr>
-
-<table class="table table-bordered" style="width: 100%; border-collapse: collapse;" border="1">
-  <thead style="background-color: #f0f0f0;">
-    <tr>
-      <th style="width: 4%">{%= __("Sr") %}</th>
-      <th style="width: 12%">{%= __("Name") %}</th>
-      <th style="width: 8%">{%= __("Date") %}</th>
-      <th style="width: 6%">{%= __("Day") %}</th>
-      <th style="width: 8%">{%= __("Act In Time") %}</th>
-      <th style="width: 8%">{%= __("Act Out Time") %}</th>
-      <th style="width: 8%">{%= __("Late Arrival (min)") %}</th>
-      <th style="width: 6%">{%= __("Day Status") %}</th>
-      <th style="width: 6%">{%= __("Attn Status") %}</th>
-      <th style="width: 6%">{%= __("Work Hrs") %}</th>
-      <th style="width: 6%">{%= __("Total Hrs") %}</th>
-      <th style="width: 6%">{%= __("Overtime") %}</th>
-      <th style="width: 6%">{%= __("Leave Early (min)") %}</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for(var i=0, l=data.length; i<l; i++) { %}
-      {% if (i > 4) { %}
-        <tr>
-          <td>{%= i+1 %}</td>
-          <td>{%= data[i].name %}</td>
-          <td>{%= data[i].date %}</td>
-          <td>{%= data[i].day %}</td>
-          <td>{%= data[i].actual_in_time %}</td>
-          <td>{%= data[i].actual_out_time %}</td>
-          <td>{%= data[i].late_arrival %}</td>
-          <td>{%= data[i].day_status %}</td>
-          <td>{%= data[i].att_status %}</td>
-          <td>{%= data[i].work_hours %}</td>
-          <td>{%= data[i].total_hours %}</td>
-          <td>{%= data[i].overtime %}</td>
-          <td>{%= data[i].early_going %}</td>
-        </tr>
-      {% } %}
-    {% } %}
-  </tbody>
-</table>
-
-<p class="text-right text-muted" style="font-size: 12px;">
-  Printed On {%= frappe.datetime.str_to_user(frappe.datetime.get_datetime_as_string()) %}
-</p>
+    {% if summary %}
+        <div class="summary">
+            <h4>Summary</h4>
+            <table class="summary-table">
+                {% for i in range(0, summary|length, 2) %}
+                    <tr>
+                        <td><strong>{{ summary[i].label }}</strong></td>
+                        <td>{{ summary[i].value }}</td>
+                        {% if i + 1 < summary|length %}
+                            <td><strong>{{ summary[i+1].label }}</strong></td>
+                            <td>{{ summary[i+1].value }}</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% endif %}
+</body>
+</html>
