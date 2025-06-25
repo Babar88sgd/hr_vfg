@@ -1,103 +1,86 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>{{ title }}</title>
+    <meta charset="UTF-8">
+    <title>Daily Employee AttendanceD-2</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 12px; }
-        h2 { text-align: center; margin-bottom: 10px; }
-
-        .info-table td { padding: 5px; }
-        .info-table { margin-bottom: 10px; width: 100%; }
-
-        table.main-table {
-            border-collapse: collapse;
-            width: 100%;
-            margin-top: 10px;
+        body {
+            font-family: "Times New Roman", serif;
+            font-size: 12px;
         }
-        table.main-table th, table.main-table td {
-            border: 1px solid #444;
-            padding: 5px;
+        h2 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 4px 6px;
             text-align: center;
         }
-        table.main-table th {
-            background-color: #f0f0f0;
+        th {
+            background-color: #eee;
         }
-
-        .summary-section {
-            margin-top: 20px;
-            width: 60%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        .summary-section th, .summary-section td {
-            padding: 4px 8px;
+        .summary-table td {
+            border: none;
             text-align: left;
         }
-
-        .footer {
-            margin-top: 30px;
-            text-align: right;
-            font-size: 10px;
-            color: #777;
+        .summary-heading {
+            font-weight: bold;
+            text-align: left;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-
     <h2>Employee Attendance Report</h2>
+    <p><strong>Date:</strong> {{ filters.to }} &nbsp;&nbsp;&nbsp; <strong>Department:</strong> {{ filters.depart or "All" }} &nbsp;&nbsp;&nbsp; <strong>Employee:</strong> {{ filters.employee or "All" }}</p>
 
-    <table class="info-table">
-        <tr>
-            <td><strong>Date:</strong></td>
-            <td>{{ filters.to }}</td>
-            {% if filters.employee %}
-            <td><strong>Employee:</strong></td>
-            <td>{{ filters.employee }}</td>
-            {% endif %}
-            {% if filters.depart %}
-            <td><strong>Department:</strong></td>
-            <td>{{ filters.depart }}</td>
-            {% endif %}
-        </tr>
-    </table>
-
-    <table class="main-table">
+    <table>
         <thead>
             <tr>
-                <th>Emp ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Status</th>
-                <th>A/P</th>
+                <th>Employee Name</th>
+                <th>Date</th>
+                <th>Day</th>
                 <th>Check In</th>
                 <th>Check Out</th>
-                <th>Late</th>
-                <th>Early</th>
+                <th>Late Arrival</th>
+                <th>Status</th>
+                <th>A/P</th>
+                <th>Early Going</th>
                 <th>Overtime</th>
             </tr>
         </thead>
         <tbody>
             {% for row in data %}
             <tr>
-                {% for cell in row %}
-                <td>{{ cell }}</td>
-                {% endfor %}
+                <td>{{ row.name }}</td>
+                <td>{{ row.date }}</td>
+                <td>{{ row.day }}</td>
+                <td>{{ row.actual_in_time }}</td>
+                <td>{{ row.actual_out_time }}</td>
+                <td>{{ row.late_arrival }}</td>
+                <td>{{ row.day_status }}</td>
+                <td>{{ row.att_status }}</td>
+                <td>{{ row.early_going }}</td>
+                <td>{{ row.overtime }}</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <h3 style="text-align: center; margin-top: 30px;">Summary</h3>
-    <table class="summary-section">
+    <h3 class="summary-heading">Summary</h3>
+    <table class="summary-table">
         {% for item in summary %}
         <tr>
             <td><strong>{{ item.label }}</strong></td>
-            <td>{{ item.value }}</td>
+            <td>: {{ item.value }}</td>
         </tr>
         {% endfor %}
     </table>
-
-    <p class="footer">Printed on {{ frappe.utils.nowdate() }}</p>
 </body>
 </html>

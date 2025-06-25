@@ -1,0 +1,46 @@
+{
+  "name": "Daily In Out Summary",
+  "owner": "Administrator",
+  "docstatus": 0,
+  "disabled": 0,
+  "doctype": "Report",
+  "idx": 0,
+  "letter_head": "Proton",
+  "letterhead": null,
+  "module": "HR VentureForce Global",
+  "prepared_report": 0,
+  "timeout": 0,
+  "roles": [
+    {
+      "role": "System Manager"
+    },
+    {
+      "role": "HR User"
+    },
+    {
+      "role": "HR Manager"
+    }
+  ],
+  "filters": [
+    {
+      "fieldname": "company",
+      "label": "Company",
+      "fieldtype": "Link",
+      "options": "Company",
+      "reqd": 1
+    },
+    {
+      "fieldname": "date",
+      "label": "Date",
+      "fieldtype": "Date",
+      "default": "Today",
+      "reqd": 1
+    },
+    {
+      "fieldname": "employees",
+      "label": "Employees",
+      "fieldtype": "MultiSelectList",
+      "get_data": "frappe.db.get_link_options('Employee')"
+    }
+  ]
+}

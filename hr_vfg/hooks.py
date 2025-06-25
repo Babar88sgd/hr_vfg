@@ -11,6 +11,7 @@ app_license = "MIT"
 
 # Includes in <head>
 # ------------------
+app_include_js = "/assets/hr_vfg/js/attendance_dashboard.js"
 
 # include js, css files in header of desk.html
 # app_include_css = "/assets/hr_vfg/css/hr_vfg.css"
@@ -101,6 +102,14 @@ doc_events = {
 		"validate": "hr_vfg.hr_ventureforce_global.salary_slip_override.add_leaves",
 	}
 }
+
+
+
+override_whitelisted_methods = {
+    "hr_vfg.api.dashboard.get_attendance_dashboard": "hr_vfg.api.dashboard.get_attendance_dashboard" 
+}
+
+
 
 # Scheduled Tasks
 # ---------------

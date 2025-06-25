@@ -22,13 +22,13 @@ frappe.query_reports["Daily Employee Attendance D-2"] = {
             "fieldname": "status",
             "label": "Status",
             "fieldtype": "Select",
-            "options": ["", "On time", "Late", "Early Going"]
+            "options": ["", "On time", "Late", "Early Going", "Half Day"]
         },
         {
             "fieldname": "a_p",
             "label": "A/P",
             "fieldtype": "Select",
-            "options": ["", "Present", "Absent", "Half Day"]
+            "options": ["", "Present", "Absent"]
         }
     ]
 }

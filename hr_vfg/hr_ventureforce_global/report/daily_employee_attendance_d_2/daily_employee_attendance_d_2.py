@@ -1,27 +1,19 @@
 import frappe
 from datetime import datetime, timedelta
-from frappe.utils.pdf import get_pdf
-from frappe.utils.jinja import render_template
-from frappe.utils import get_url_to_report
 
 def execute(filters=None):
     columns, data = get_columns(), get_data(filters)
     summary = get_summary(data, filters)
 
-    # Add empty row for spacing
-    data.append([""] * 11)
+    data.append([""] * 12)
+    data.append(["", "", "", "", "", "<b> Summary </b>", "", "", "", "", "", ""])
 
-    # Add centered summary heading
-    data.append(["", "", "", "", "", "<b> Summary </b>", "", "", "", "", ""])
-
-    # Add summary rows in columns 2 to 5: label1, value1, label2, value2
     for i in range(0, len(summary), 2):
         label1 = f"<b>{summary[i]['label']}</b>"
         value1 = summary[i]['value']
         label2 = f"<b>{summary[i+1]['label']}</b>" if i + 1 < len(summary) else ""
         value2 = summary[i+1]['value'] if i + 1 < len(summary) else ""
-
-        data.append(["", "", label1, value1, label2, value2, "", "", "", "", ""])
+        data.append(["", "", label1, value1, label2, value2, "", "", "", "", "", ""])
 
     return columns, data
 
@@ -37,7 +29,8 @@ def get_columns():
         "A/P:Select:100",
         "Late Coming (HH:MM:SS):Data:140",
         "Early Going (HH:MM:SS):Data:140",
-        "Over Time (HH:MM:SS):Data:140"
+        "Total Working Hours:Data:140",
+        "Over Time (HH:MM:SS):Data:140",
     ]
 
 def format_time(seconds):
@@ -79,6 +72,7 @@ def get_data(filters):
         late_seconds = 0
         early_seconds = 0
         overtime_seconds = 0
+        total_working_seconds = 0
 
         try:
             if not row.shift_type:
@@ -88,7 +82,8 @@ def get_data(filters):
             shift_settings = frappe.get_value(
                 "Shift Day",
                 {"parent": row.shift_type, "day": day_name},
-                ["start_time", "end_time", "minimum_hours_for_present", "minimum_hours_for_half_day", "late_mark"],
+                ["start_time", "end_time", "minimum_hours_for_present", "minimum_hours_for_half_day",
+                 "late_mark", "day_type", "half_day", "max_early"],
                 as_dict=True,
             )
 
@@ -98,64 +93,71 @@ def get_data(filters):
             shift_start = datetime.strptime(str(shift_settings.start_time), "%H:%M:%S")
             shift_end = datetime.strptime(str(shift_settings.end_time), "%H:%M:%S")
             late_mark = datetime.strptime(str(shift_settings.late_mark), "%H:%M:%S")
-            min_present = shift_settings.minimum_hours_for_present or 540
-            min_half = shift_settings.minimum_hours_for_half_day or 270
+            min_present = (shift_settings.minimum_hours_for_present or 540) * 60
+            min_half = (shift_settings.minimum_hours_for_half_day or 270) * 60
+            day_type = shift_settings.day_type
 
-            if row.shift_type == "WeeklyOff":
-                check_in = datetime.strptime(str(check_in_time)[-8:], "%H:%M:%S")
-                check_out = datetime.strptime(str(check_out_time)[-8:], "%H:%M:%S")
-                if check_out < check_in:
+            check_in = datetime.strptime(str(check_in_time)[-8:], "%H:%M:%S") if check_in_time else None
+            check_out = datetime.strptime(str(check_out_time)[-8:], "%H:%M:%S") if check_out_time else None
+
+            is_night_shift = shift_start > shift_end or row.shift_type == "Night"
+            if is_night_shift:
+                shift_end += timedelta(days=1)
+                if check_out and check_in and check_out < check_in:
                     check_out += timedelta(days=1)
-                worked_seconds = (check_out - check_in).total_seconds()
-                if worked_seconds > 14400:
-                    overtime_seconds = worked_seconds
-                status = "Present"
-                ap_status = "Present"
 
+            if day_type == "WeeklyOff":
+                if check_in and check_out:
+                    total_working_seconds = (check_out - check_in).total_seconds()
+                    overtime_seconds = total_working_seconds if total_working_seconds > 4 * 3600 else 0
+                ap_status = status = "Present"
             else:
-                if check_in_time and check_out_time:
-                    check_in = datetime.strptime(str(check_in_time)[-8:], "%H:%M:%S")
-                    check_out = datetime.strptime(str(check_out_time)[-8:], "%H:%M:%S")
-
-                    if check_out < shift_start:
-                        check_out += timedelta(days=1)
-
+                if check_in and check_out:
+                    total_working_seconds = (check_out - check_in).total_seconds()
                     late_diff = (check_in - shift_start).total_seconds()
                     late_seconds = late_diff if late_diff > 0 else 0
 
-                    if check_out < shift_end:
-                        early_seconds = (shift_end - check_out).total_seconds()
+                    half_day_flag = False
+                    if shift_settings.half_day:
+                        half_day_start_dt = datetime.combine(check_out.date(), datetime.strptime(str(shift_settings.half_day), "%H:%M:%S").time())
+                        max_early_dt = half_day_start_dt + timedelta(minutes=shift_settings.max_early or 0)
+                        if half_day_start_dt <= check_out < max_early_dt:
+                            status = "Half Day"
+                            half_day_flag = True
+                        elif max_early_dt <= check_out <= shift_end:
+                            early_seconds = (shift_end - check_out).total_seconds()
+                            status = "Early Going"
+                        else:
+                            status = "On time"
+                    else:
+                        status = "On time"
 
-                    if check_out > shift_end:
-                        overtime_seconds = (check_out - shift_end).total_seconds()
-                        if overtime_seconds < 14400:
-                            overtime_seconds = 0
+                    if total_working_seconds < min_half:
+                        status = "Absent"
+                        half_day_flag = False
 
-                    worked_seconds = (check_out - check_in).total_seconds()
-                    if worked_seconds < min_half * 60:
-                        ap_status = "Half Day"
-                    elif worked_seconds < min_present * 60:
+                    if not half_day_flag:
+                        if check_in > late_mark:
+                            status = "Late"
+                        elif status not in ["Early Going", "Half Day"]:
+                            status = "On time"
+
+                    if total_working_seconds < min_half:
                         ap_status = "Absent"
+                    elif total_working_seconds < min_present:
+                        ap_status = "Half Day"
                     else:
                         ap_status = "Present"
 
-                    if check_in > late_mark:
-                        status = "Late"
-                    elif early_seconds > 0:
-                        status = "Early Going"
+                    if check_out > shift_end:
+                        overtime_seconds = (check_out - shift_end).total_seconds()
                     else:
-                        status = "On time"
+                        overtime_seconds = 0
 
-                elif check_in_time and not check_out_time:
-                    check_in = datetime.strptime(str(check_in_time)[-8:], "%H:%M:%S")
+                elif check_in and not check_out:
                     late_diff = (check_in - shift_start).total_seconds()
                     late_seconds = late_diff if late_diff > 0 else 0
-
-                    if check_in > late_mark:
-                        status = "Late"
-                    else:
-                        status = "On time"
-
+                    status = "Late" if check_in > late_mark else "On time"
                     ap_status = "Absent"
                 else:
                     ap_status = "Absent"
@@ -179,87 +181,103 @@ def get_data(filters):
             row.employee_name,
             row.designation,
             row.department,
-            check_in_time or "",
-            check_out_time or "",
+            str(check_in_time) if check_in_time else "",
+            str(check_out_time) if check_out_time else "",
             status,
             ap_status,
             format_time(late_seconds),
             format_time(early_seconds),
+            format_time(total_working_seconds),
             format_time(overtime_seconds),
         ])
 
     return data
 
 def get_summary(data, filters):
-    status_counts = {"On time": 0, "Late": 0, "Early Going": 0}
-    ap_counts = {"Present": 0, "Absent": 0, "Half Day": 0}
-    filtered_status_count = 0
-    filtered_ap_count = 0
+    status_labels = ["On Time", "Late", "Half Day", "Early Going"]
+    ap_labels = ["Present", "Absent"]
+
+    # Normalize filters
+    filter_status = (filters.get("status") or "").strip().title()
+    filter_ap = (filters.get("a_p") or "").strip().title()
+
+    # Initialize counts
+    count_map = {label: 0 for label in status_labels + ap_labels}
 
     for row in data:
-        status = (row[6] or "").strip()
-        ap = (row[7] or "").strip()
+        # Normalize values from row
+        status_val = (row[6] or "").strip().title()
+        ap_val = (row[7] or "").strip().title()
 
-        if status in status_counts:
-            status_counts[status] += 1
-        if ap in ap_counts:
-            ap_counts[ap] += 1
+        # Apply filters
+        if filter_status and status_val != filter_status:
+            continue
+        if filter_ap and ap_val != filter_ap:
+            continue
 
-        if filters.get("status") and status.lower() == filters["status"].strip().lower():
-            filtered_status_count += 1
-        if filters.get("a_p") and ap.lower() == filters["a_p"].strip().lower():
-            filtered_ap_count += 1
+        if status_val in status_labels:
+            count_map[status_val] += 1
+        if ap_val in ap_labels:
+            count_map[ap_val] += 1
 
+    # Prepare summary based on filters
     summary = []
 
-    if filters.get("status"):
-        summary.append({"label": f"Total {filters['status']} (Filtered)", "value": filtered_status_count})
-    else:
-        for status in ["On time", "Late", "Early Going"]:
-            summary.append({"label": f"Total {status}", "value": status_counts[status]})
+    if filter_status and not filter_ap:
+        # Only Status filter is applied ? show all A/P values + filtered Status
+        for label in ap_labels:
+            summary.append({
+                "label": label,
+                "value": count_map[label],
+                "col": 3
+            })
+        summary.append({
+            "label": filter_status,
+            "value": count_map[filter_status],
+            "col": 3
+        })
 
-    if filters.get("a_p"):
-        summary.append({"label": f"Total {filters['a_p']} (Filtered)", "value": filtered_ap_count})
+    elif filter_ap and not filter_status:
+        # Only A/P filter is applied ? show all Status values + filtered A/P
+        for label in status_labels:
+            summary.append({
+                "label": label,
+                "value": count_map[label],
+                "col": 3
+            })
+        summary.append({
+            "label": filter_ap,
+            "value": count_map[filter_ap],
+            "col": 3
+        })
+
     else:
-        for ap in ["Present", "Absent", "Half Day"]:
-            summary.append({"label": f"Total {ap}", "value": ap_counts[ap]})
+        # No filters or both filters ? show all 6 values
+        for label in status_labels + ap_labels:
+            summary.append({
+                "label": label,
+                "value": count_map[label],
+                "col": 3
+            })
 
     return summary
-
-@frappe.whitelist()
-def download_attendance_pdf(filters=None):
-    import json
-    if isinstance(filters, str):
-        filters = json.loads(filters)
-
-    columns, data = execute(filters)
+def execute(filters=None):
+    columns, data = get_columns(), get_data(filters)
     summary = get_summary(data, filters)
 
-    context = {
-        "filters": filters,
-        "data": [
-            {
-                "name": row[1],
-                "date": filters.get("to"),
-                "day": frappe.utils.formatdate(filters.get("to"), "dddd"),
-                "actual_in_time": row[4],
-                "actual_out_time": row[5],
-                "late_arrival": row[8],
-                "day_status": row[6],
-                "att_status": row[7],
-                "work_hours": "",  # Add if calculated
-                "total_hours": "",  # Add if calculated
-                "overtime": row[10],
-                "early_going": row[9],
-            }
-            for row in data if row[1]
-        ],
-        "summary": summary,
-    }
+    # ? Step 1: Add blank row
+    data.append([""] * 12)
 
-    html = render_template("custom_reports/templates/employee_attendance_pdf.html", context)
-    pdf = get_pdf(html)
+    # ? Step 2: Add summary heading in column 3
+    data.append(["", "", "<b> Summary </b>", "", "", "", "", "", "", "", "", ""])
 
-    frappe.local.response.filename = "employee_attendance_report.pdf"
-    frappe.local.response.filecontent = pdf
-    frappe.local.response.type = "download"
+    # ? Step 3: Add summary lines (starting from column 3)
+    for i in range(0, len(summary), 2):
+        label1 = f"<b>{summary[i]['label']}</b>"
+        value1 = summary[i]['value']
+        label2 = f"<b>{summary[i+1]['label']}</b>" if i + 1 < len(summary) else ""
+        value2 = summary[i+1]['value'] if i + 1 < len(summary) else ""
+        data.append(["", "", label1, value1, label2, value2, "", "", "", "", "", ""])
+
+    return columns, data
+

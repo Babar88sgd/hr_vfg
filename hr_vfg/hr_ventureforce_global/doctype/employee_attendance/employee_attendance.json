@@ -10,17 +10,17 @@
   "month",
   "email_id",
   "unit",
-  "joining_date",
   "image",
   "column_break_3",
   "employee_name",
   "year",
   "department",
-  "shift_type",
+  "joining_date",
   "column_break_7",
   "biometric_id",
   "company",
   "designation",
+  "shift_type",
   "section_break_5",
   "table1",
   "section_break_7",
@@ -129,14 +129,16 @@
    "fetch_from": "employee.branch",
    "fieldname": "unit",
    "fieldtype": "Read Only",
-   "label": "Branch"
+   "label": "Branch",
+   "read_only": 1
   },
   {
    "fetch_from": "employee.company_email",
    "fieldname": "email_id",
    "fieldtype": "Data",
    "hidden": 1,
-   "label": "Email ID"
+   "label": "Email ID",
+   "read_only": 1
   },
   {
    "fieldname": "column_break_3",
@@ -146,7 +148,8 @@
    "fetch_from": "employee.employee_name",
    "fieldname": "employee_name",
    "fieldtype": "Read Only",
-   "label": "Employee Name"
+   "label": "Employee Name",
+   "read_only": 1
   },
   {
    "fieldname": "month",
@@ -433,7 +436,8 @@
    "fetch_from": "employee.date_of_joining",
    "fieldname": "joining_date",
    "fieldtype": "Data",
-   "label": "Joining Date"
+   "label": "Joining Date",
+   "read_only": 1
   },
   {
    "fieldname": "late_comparision",
@@ -648,12 +652,13 @@
    "fetch_from": "employee.default_shift",
    "fieldname": "shift_type",
    "fieldtype": "Data",
-   "label": "Shift Type"
+   "label": "Shift Type",
+   "read_only": 1
   }
  ],
  "image_field": "image",
  "links": [],
- "modified": "2025-05-09 11:49:02.243445",
+ "modified": "2025-06-25 10:59:14.787637",
  "modified_by": "Administrator",
  "module": "HR VentureForce Global",
  "name": "Employee Attendance",

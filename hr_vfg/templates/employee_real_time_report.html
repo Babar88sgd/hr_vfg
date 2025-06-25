@@ -1,0 +1,38 @@
+<h2>Employee Real Time Report</h2>
+<p><strong>From:</strong> {{ filters.from_date }} — <strong>To:</strong> {{ filters.to_date }}</p>
+{% if employee %}
+<p><strong>Employee:</strong> {{ employee.name }} - {{ employee.employee_name }}</p>
+{% else %}
+<p><strong>Employee:</strong> All Employees</p>
+{% endif %}
+
+<table>
+  <thead>
+    <tr>
+      <th>Employee</th>
+      <th>Name</th>
+      <th>Date</th>
+      <th>Check In</th>
+      <th>Check Out</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in data %}
+    <tr>
+      <td>{{ row.employee }}</td>
+      <td>{{ row.employee_name }}</td>
+      <td>{{ row.attendance_date }}</td>
+      <td>{{ row.check_in_1 or '' }}</td>
+      <td>{{ row.check_out_1 or '' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<hr>
+<h4>Summary</h4>
+<ul>
+  <li>Total Days: {{ summary.total_days }}</li>
+  <li>Total Present: {{ summary.total_present }}</li>
+  <li>Total Absent: {{ summary.total_absent }}</li>
+</ul>
