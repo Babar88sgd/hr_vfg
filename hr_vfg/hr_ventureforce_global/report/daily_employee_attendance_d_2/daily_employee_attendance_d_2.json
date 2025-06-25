@@ -1,4 +1,6 @@
 {
+  "doctype": "Report",
+  "name": "Daily Employee Attendance D-2",
   "filters": [
     {
       "fieldname": "status",
